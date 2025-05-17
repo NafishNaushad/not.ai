@@ -1,12 +1,60 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
+import { supabase } from "./ supabaseClient.js";
 import "./App.css";
 
-function App() {
+export default function App() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Image analysis states
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [analyzeLoading, setAnalyzeLoading] = useState(false);
   const [result, setResult] = useState("");
 
+  // On mount, check if user is already logged in
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error fetching session:", error.message);
+      } else {
+        console.log("Session:", session);
+      }
+    };
+
+    getSession();
+  }, []);
+
+  // Auth functions
+  async function signUp() {
+    setLoading(true);
+    setError("");
+    const { user, error } = await supabase.auth.signUp({ email, password });
+    setLoading(false);
+    if (error) setError(error.message);
+    else setUser(user);
+  }
+
+  async function signIn() {
+    setLoading(true);
+    setError("");
+    const { user, error } = await supabase.auth.signIn({ email, password });
+    setLoading(false);
+    if (error) setError(error.message);
+    else setUser(user);
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setUser(null);
+  }
+
+  // Image analysis handlers
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -18,29 +66,61 @@ function App() {
 
   const handleSubmit = async () => {
     if (!image) return alert("Upload an image first.");
-    setLoading(true);
+    setAnalyzeLoading(true);
 
     // Placeholder for API call
     setTimeout(() => {
-      setResult("Jawline score: 6/10 — Needs sharpening.\nRecommended: Mewing + Neck curls");
-      setLoading(false);
+      setResult(
+        "Jawline score: 6/10 — Needs sharpening.\nRecommended: Mewing + Neck curls"
+      );
+      setAnalyzeLoading(false);
     }, 2000);
   };
 
+  // Render login if not logged in
+  if (!user) {
+    return (
+      <div className="app auth">
+        <h1>Login to not.ai</h1>
+        <input
+          type="email"
+          placeholder="Email"
+          onChange={(e) => setEmail(e.target.value)}
+          value={email}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          onChange={(e) => setPassword(e.target.value)}
+          value={password}
+        />
+        <button onClick={signUp} disabled={loading}>
+          Sign Up
+        </button>
+        <button onClick={signIn} disabled={loading}>
+          Sign In
+        </button>
+        {error && <div style={{ color: "red" }}>{error}</div>}
+      </div>
+    );
+  }
+
+  // Render main app when logged in
   return (
     <div className="app">
       <h1>not.ai — Facial & Physique Improvement</h1>
+      <button onClick={signOut}>Sign Out</button>
 
       <input type="file" accept="image/*" onChange={handleFileChange} />
       {preview && <img src={preview} alt="preview" className="preview" />}
 
-      <button onClick={handleSubmit} disabled={loading}>
-        {loading ? "Analyzing..." : "Analyze"}
+      <button onClick={handleSubmit} disabled={analyzeLoading}>
+        {analyzeLoading ? "Analyzing..." : "Analyze"}
       </button>
 
       {result && <pre className="result">{result}</pre>}
     </div>
   );
 }
+console.log("Check path", import.meta.glob("./*"));
 
-export default App;
