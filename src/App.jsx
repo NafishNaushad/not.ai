@@ -1,3 +1,26 @@
+import { useEffect } from 'react';
+import { supabase } from './supabaseClient';
+
+useEffect(() => {
+  const getSession = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
+  };
+
+  getSession();
+
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      setUser(session.user);
+    } else {
+      setUser(null);
+    }
+  });
+
+  return () => {
+    listener.subscription.unsubscribe();
+  };
+}, []);
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "./ supabaseClient.js";
@@ -31,28 +54,28 @@ export default function App() {
   }, []);
 
   // Auth functions
-  async function signUp() {
+  const signUp = async () => {
     setLoading(true);
     setError("");
-    const { user, error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
     setLoading(false);
     if (error) setError(error.message);
-    else setUser(user);
-  }
+  };
 
-  async function signIn() {
+  const signIn = async () => {
     setLoading(true);
     setError("");
-    const { user, error } = await supabase.auth.signIn({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     setLoading(false);
     if (error) setError(error.message);
-    else setUser(user);
-  }
+  };
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    setUser(null);
-  }
 
   // Image analysis handlers
   const handleFileChange = (e) => {
